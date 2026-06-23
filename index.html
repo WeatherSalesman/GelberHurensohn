@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gelber Hurensohn</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f5f5f5;
+    padding: 0;
+    color: #222;
+}
+
+#container {
+    max-width: 56em;
+    margin: 0 auto;
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    background-image: url("hurensohn.png");
+    background-position: right 0px top 0px;
+    background-repeat: no-repeat;
+}
+
+h1 {
+    margin-top: 0;
+}
+
+.search {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+input {
+    flex: 1;
+    padding: 8px;
+    font-size: 16px;
+    max-width: 20em;
+}
+
+button {
+    padding: 8px 14px;
+    cursor: pointer;
+}
+
+#hourly {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    margin-top: 15px;
+}
+
+.hour {
+    min-width: 70px;
+    text-align: center;
+    background: #eef4ff;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.small {
+    color: #666;
+    font-size: 0.9em;
+}
+</style>
+</head>
+<body>
+
+<div id="container">
+
+<h1>Gelber Hurensohn</h1>
+
+<div class="search">
+    <input
+        id="locationInput"
+        type="text"
+        placeholder="Ortsname (z.B. Mordor)"
+    >
+    <button id="searchLocationButton" onclick="searchLocation()">Suchen</button>
+    <button id="useMyLocationButton" onclick="useMyLocation(true)">Jetziger Standort</button>
+</div>
+
+<h3 id="place">Kein Standort</h3>
+
+<h2 id="currentTemp" style="display: inline;clear: none;"></h2><p id="currentTempText" style="display: inline;clear: none;"></p>
+
+<div id="hourly"></div>
+
+<p id="sunInfo"></p>
+
+</div>
+
+<script>
+async function loadWeather(lat, lon, label)
+{
+    document.getElementById("place").textContent = "Lädt...";
+
+    const url =
+        `https://api.open-meteo.com/v1/forecast` +
+        `?latitude=${lat}` +
+        `&longitude=${lon}` +
+        `&current=temperature_2m` +
+        `&hourly=temperature_2m` +
+        `&daily=sunrise,sunset` +
+        `&forecast_days=2` +
+        `&timezone=auto`;
+
+    const response = await fetch(url);
+    const data = await response.json();
+
+    document.getElementById("place").textContent = label;
+
+    document.getElementById("currentTemp").textContent =
+        data.current.temperature_2m.toFixed(1).toString() + "°C";
+    
+    var bgImage = "hurensohn.png";
+    var currentTempText = "";
+    if (data.current.temperature_2m >= 35.0)
+    {
+        currentTempText = " müssen wir wegen dem Gelben Hurensohn aktuell ertragen, weil er uns töten will 😥";
+        bgImage = "hurensohn_finger.png";
+    }
+    else if (data.current.temperature_2m >= 24.0)
+    {
+        currentTempText = " müssen wir wegen dem Gelben Hurensohn aktuell ertragen 🫠";
+        bgImage = "hurensohn_finger.png";
+    }
+    else if (data.current.temperature_2m >= 21.0)
+    {
+        currentTempText = " gönnt uns der Gelbe Ehrenbruder momentan 😎";
+    }
+    else if (data.current.temperature_2m >= 18.0)
+    {
+        currentTempText = " gönnt uns der Gelbe Hurensohn momentan 🌞";
+    }
+    else if (data.current.temperature_2m >= 12.0)
+    {
+        currentTempText = " lässt der Gelbe Hurensohn uns momentan noch 🌤";
+        bgImage = "hurensohn_finger.png";
+    }
+    else if (data.current.temperature_2m >= 0.0)
+    {
+        currentTempText = " lässt der Gelbe Hurensohn uns momentan nur noch, weil er zu faul ist 😥";
+        bgImage = "hurensohn_finger.png";
+    }
+    else
+    {
+        currentTempText = " lässt der Gelbe Hurensohn uns nur noch, weil er uns töten will 😥";
+        bgImage = "hurensohn_finger.png";
+    }
+    
+    document.getElementById("currentTempText").textContent = currentTempText;
+    document.getElementById("container").style.backgroundImage = "url("+bgImage+")";
+
+    const now = new Date();
+
+    const sunriseToday = new Date(data.daily.sunrise[0]);
+    const sunsetToday = new Date(data.daily.sunset[0]);
+    const sunriseTomorrow = new Date(data.daily.sunrise[1]);
+
+    if (now < sunsetToday && now > sunriseToday)
+    {
+        document.getElementById("sunInfo").innerHTML =
+            "Um " +
+                (sunsetToday.toLocaleTimeString([],
+                {
+                    hour: "2-digit",
+                    minute: "2-digit"
+                }) + 
+                " Uhr").bold() + " verpisst sich der Gelbe Hurensohn wieder 🥳";
+    }
+    else
+    {
+        const sunrise =
+            now < sunriseToday ? sunriseToday : sunriseTomorrow;
+
+        document.getElementById("sunInfo").innerHTML =
+            "Um <b>" +
+                (sunrise.toLocaleTimeString([],
+                {
+                    hour: "2-digit",
+                    minute: "2-digit"
+                }) +
+                " Uhr").bold() + " kommt der Gelbe Hurensohn zurück :("
+    }
+
+    const hourlyDiv = document.getElementById("hourly");
+    hourlyDiv.innerHTML = "";
+
+    const times = data.hourly.time;
+    const temps = data.hourly.temperature_2m;
+
+    for (let i = 0; i < times.length; i++)
+    {
+        const t = new Date(times[i]);
+        if (t >= now &&
+            t.getDate() === now.getDate())
+        {
+            const div = document.createElement("div");
+            div.className = "hour";
+
+            div.innerHTML =
+                `<strong>${t.getHours()}:00</strong>
+                 <div>${temps[i]} °C</div>`;
+
+            hourlyDiv.appendChild(div);
+        }
+    }
+}
+
+async function searchLocation()
+{
+    document.getElementById("place").textContent = "Suche Standort...";
+
+    const query = document.getElementById("locationInput").value;
+
+    if (!query) return;
+
+    const res = await fetch(
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1`
+    );
+
+    const geo = await res.json();
+
+    if (!geo.results || geo.results.length === 0)
+    {
+        alert("Location not found.");
+        return;
+    }
+
+    const place = geo.results[0];
+
+    loadWeather(
+        place.latitude,
+        place.longitude,
+        `${place.name}, ${place.country}`
+    );
+}
+
+function useMyLocation(enableAlert)
+{
+    if (enableAlert)
+    {
+        document.getElementById("place").textContent = "Suche Standort...";
+    }
+
+    const options = {
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 600000,
+    };
+
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            console.log("Got location: "+pos.coords.latitude.toString()+", "+pos.coords.longitude.toString());
+            loadWeather(
+                pos.coords.latitude,
+                pos.coords.longitude,
+                "Your Location"
+            );
+        },
+        (err) => {
+            console.warn(`Geolocation Error (${err.code}): ${err.message}`);
+            if (enableAlert)
+            {
+                alert("Dein Standort konnte nicht ermittelt werden.");
+            }
+        },
+        options
+    );
+}
+
+document.getElementById("locationInput").addEventListener("keyup", function(event)
+{
+    event.preventDefault();
+    if (event.keyCode == 13) {
+        document.getElementById("searchLocationButton").click();
+    }
+});
+
+useMyLocation(false);
+</script>
+
+</body>
+</html>
