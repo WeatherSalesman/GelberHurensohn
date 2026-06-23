@@ -51,14 +51,21 @@ button {
     cursor: pointer;
 }
 
-#hourly {
+#hourlyTemps {
     display: flex;
     gap: 12px;
     overflow-x: auto;
     margin-top: 15px;
 }
 
-.hour {
+#dailyTemps {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    margin-top: 15px;
+}
+
+.tempDiv {
     min-width: 70px;
     text-align: center;
     background: #eef4ff;
@@ -92,7 +99,8 @@ button {
 
 <h2 id="currentTemp" style="display: inline;clear: none;"></h2><p id="currentTempText" style="display: inline;clear: none;"></p>
 
-<div id="hourly"></div>
+<div id="hourlyTemps"></div>
+<div id="dailyTemps"></div>
 
 <p id="sunInfo"></p>
 
@@ -109,8 +117,8 @@ async function loadWeather(lat, lon, label)
         `&longitude=${lon}` +
         `&current=temperature_2m` +
         `&hourly=temperature_2m` +
-        `&daily=sunrise,sunset` +
-        `&forecast_days=2` +
+        `&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min` +
+        `&forecast_days=8` +
         `&timezone=auto`;
 
     const response = await fetch(url);
@@ -192,26 +200,49 @@ async function loadWeather(lat, lon, label)
                 " Uhr").bold() + " kommt der Gelbe Hurensohn zurück :("
     }
 
-    const hourlyDiv = document.getElementById("hourly");
+    const hourlyDiv = document.getElementById("hourlyTemps");
     hourlyDiv.innerHTML = "";
 
-    const times = data.hourly.time;
-    const temps = data.hourly.temperature_2m;
+    var nextDay = new Date();
+    nextDay.setDate(nextDay.getDate() + 1);
 
-    for (let i = 0; i < times.length; i++)
+    for (let i = 0, j = 0; i < data.hourly.temperature_2m.length && j < 24; i++)
     {
-        const t = new Date(times[i]);
-        if (t >= now &&
-            t.getDate() === now.getDate())
+        const temp = data.hourly.temperature_2m[i]
+        const time = new Date(data.hourly.time[i]);
+        if (time >= now && (time.getDate() === now.getDate() || time.getDate() === nextDay.getDate()))
         {
             const div = document.createElement("div");
-            div.className = "hour";
+            div.className = "tempDiv";
 
             div.innerHTML =
-                `<strong>${t.getHours()}:00</strong>
-                 <div>${temps[i]} °C</div>`;
+                `<div>${time.getHours()}:00</div>
+                 <strong>${temp}°C</strong>`;
 
             hourlyDiv.appendChild(div);
+            j += 1;
+        }
+    }
+    
+    const dailyDiv = document.getElementById("dailyTemps");
+    dailyDiv.innerHTML = "";
+    
+    for (let i = 0; i < data.daily.time.length && i < 8; i++)
+    {
+        const temp_max = data.daily.temperature_2m_max[i]
+        const temp_min = data.daily.temperature_2m_min[i]
+        const temp_date = new Date(data.daily.time[i]);
+        if (temp_date >= now)
+        {
+            const div = document.createElement("div");
+            div.className = "tempDiv";
+            
+            const dateOptions = {"weekday": "short", month: "numeric", day: "numeric"}
+            div.innerHTML =
+                `<div>${temp_date.toLocaleDateString("de-DE", dateOptions)}</div>
+                 <strong>${temp_max}°C</strong> / <small>${temp_min}°C</small>`;
+
+            dailyDiv.appendChild(div);
         }
     }
 }
