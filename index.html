@@ -17,10 +17,12 @@ body {
     max-width: 56em;
     margin: 0 auto;
     background: white;
-    padding: 25px;
+    padding: 32px 10px;
     border-radius: 12px;
     box-shadow: 0 3px 10px rgba(0,0,0,0.1);
     background-image: url("hurensohn.png");
+    background-color: rgba(255, 255, 255, 0.5);
+    background-blend-mode: lighten;
     background-position: right 0px top 0px;
     background-repeat: no-repeat;
 }
@@ -39,7 +41,7 @@ input {
     flex: 1;
     padding: 8px;
     font-size: 16px;
-    max-width: 20em;
+    max-width: 12em;
 }
 
 button {
@@ -81,7 +83,7 @@ button {
         placeholder="Ortsname (z.B. Mordor)"
     >
     <button id="searchLocationButton" onclick="searchLocation()">Suchen</button>
-    <button id="useMyLocationButton" onclick="useMyLocation(true)">Jetziger Standort</button>
+    <button id="useMyLocationButton" onclick="useMyLocation(true)">Standort</button>
 </div>
 
 <h3 id="place">Kein Standort</h3>
@@ -166,7 +168,7 @@ async function loadWeather(lat, lon, label)
     {
         document.getElementById("sunInfo").innerHTML =
             "Um " +
-                (sunsetToday.toLocaleTimeString([],
+                (sunsetToday.toLocaleTimeString("de-DE",
                 {
                     hour: "2-digit",
                     minute: "2-digit"
@@ -180,7 +182,7 @@ async function loadWeather(lat, lon, label)
 
         document.getElementById("sunInfo").innerHTML =
             "Um <b>" +
-                (sunrise.toLocaleTimeString([],
+                (sunrise.toLocaleTimeString("de-DE",
                 {
                     hour: "2-digit",
                     minute: "2-digit"
@@ -250,7 +252,7 @@ function useMyLocation(enableAlert)
 
     const options = {
         enableHighAccuracy: true,
-        timeout: 5000,
+        timeout: 30000,
         maximumAge: 600000,
     };
 
@@ -260,7 +262,7 @@ function useMyLocation(enableAlert)
             loadWeather(
                 pos.coords.latitude,
                 pos.coords.longitude,
-                "Your Location"
+                "Jetziger Standort ("+pos.coords.latitude.toString()+", "+pos.coords.longitude.toString()+")"
             );
         },
         (err) => {
