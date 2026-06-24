@@ -257,28 +257,63 @@ async function searchLocation()
 	
 	var place = null;
 	
+	const plzRegexp = /^\d{5}$/;
+	
 	if (query.toLowerCase() === "mordor")
 	{
 		place = await findMordor();
+	}
+	else if (query.length == 5 && plzRegexp.test(query))
+	{
+		var res = null;
+		try
+		{
+			res = await fetch(
+				`https://nominatim.openstreetmap.org/search?postalcode=${query}&country=Germany&format=jsonv2`
+			);
+		}
+		catch (e)
+		{
+			alert("Nö, finden wa nicht.");
+			return;
+		}
+		const geo = await res.json();
+		
+		if (!geo || geo.length === 0)
+		{
+			alert("Nö, finden wa nicht.");
+			return;
+		}
+
+		place = geo[0];
+		place = {
+			latitude: place.lat,
+			longitude: place.lon,
+			name: place.display_name,
+		};
 	}
 	else
 	{
 		const res = await fetch(
 			`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1`
 		);
-
 		const geo = await res.json();
 
 		if (!geo.results || geo.results.length === 0)
 		{
-			alert("Location not found.");
+			alert("Nö, finden wa nicht.");
 			return;
 		}
 
 		place = geo.results[0];
+		place = {
+			latitude: place.latitude,
+			longitude: place.longitude,
+			name: `${place.name}, ${place.country}`,
+		};
 	}
 	
-	loadWeather(place.latitude, place.longitude, `${place.name}, ${place.country}`);
+	loadWeather(place.latitude, place.longitude, place.name);
 }
 
 async function useMyLocation(enableAlert)
@@ -295,14 +330,7 @@ async function useMyLocation(enableAlert)
     };
 
     navigator.geolocation.getCurrentPosition(
-        (pos) => {
-            console.log("Got location: "+pos.coords.latitude.toString()+", "+pos.coords.longitude.toString());
-            loadWeather(
-                pos.coords.latitude,
-                pos.coords.longitude,
-                "Jetziger Standort ("+pos.coords.latitude.toString()+", "+pos.coords.longitude.toString()+")"
-            );
-        },
+        showMyLocation,
         (err) => {
             console.warn(`Geolocation Error (${err.code}): ${err.message}`);
             if (enableAlert)
@@ -312,6 +340,45 @@ async function useMyLocation(enableAlert)
         },
         options
     );
+}
+
+async function showMyLocation(pos)
+{
+	console.log("Got location: "+pos.coords.latitude.toString()+", "+pos.coords.longitude.toString());
+	var locationString = "Jetziger Standort ("+pos.coords.latitude.toString()+", "+pos.coords.longitude.toString()+")";
+	//var location = await getLocationName(pos.coords.latitude, pos.coords.longitude);
+	//if (location)
+	//{
+	//	locationString = `${location.name}, ${location.country}`;
+	//}
+	loadWeather(
+		pos.coords.latitude,
+		pos.coords.longitude,
+		locationString
+	);
+}
+
+async function getLocationName(lat, lon) {
+	console.log(lat.toString()+", "+lon.toString());
+	const url = `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${lat}&longitude=${lon}&language=de`;
+
+	const response = await fetch(url);
+	const data = await response.json();
+
+	if (!data.results?.length)
+	{
+		return null;
+	}
+
+	const place = data.results[0];
+
+	return {
+		name: place.name,
+		country: place.country,
+		region: place.admin1,
+		latitude: place.latitude,
+		longitude: place.longitude,
+	};
 }
 
 async function findMordor()
@@ -338,8 +405,7 @@ async function findMordor()
 		{
 			city = cities[index]
 			mordor = {
-				name: city.name,
-				country: "Germany",
+				name: city.name + ", Germany",
 				latitude: city.lat,
 				longitude: city.lon,
 				temperature: temp
