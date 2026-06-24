@@ -51,14 +51,7 @@ button {
     cursor: pointer;
 }
 
-#hourlyTemps {
-    display: flex;
-    gap: 12px;
-    overflow-x: auto;
-    margin-top: 15px;
-}
-
-#dailyTemps {
+.tempContainerDiv {
     display: flex;
     gap: 12px;
     overflow-x: auto;
@@ -99,14 +92,22 @@ button {
 
 <h2 id="currentTemp" style="display: inline;clear: none;"></h2><p id="currentTempText" style="display: inline;clear: none;"></p>
 
-<div id="hourlyTemps"></div>
-<div id="dailyTemps"></div>
+<div id="hourlyTemps" class="tempContainerDiv"></div>
+<div id="dailyTemps" class="tempContainerDiv"></div>
 
 <p id="sunInfo"></p>
 
 </div>
 
 <script>
+if(typeof(String.prototype.trim) === "undefined")
+{
+    String.prototype.trim = function() 
+    {
+        return String(this).replace(/^\s+|\s+$/g, '');
+    };
+}
+
 async function loadWeather(lat, lon, label)
 {
     document.getElementById("place").textContent = "Lädt...";
@@ -240,7 +241,7 @@ async function loadWeather(lat, lon, label)
             const dateOptions = {"weekday": "short", month: "numeric", day: "numeric"}
             div.innerHTML =
                 `<div>${temp_date.toLocaleDateString("de-DE", dateOptions)}</div>
-                 <strong>${temp_max}°C</strong> / <small>${temp_min}°C</small>`;
+                 <div><strong>${temp_max}°C</strong> / <small>${temp_min}°C</small></div>`;
 
             dailyDiv.appendChild(div);
         }
@@ -249,34 +250,38 @@ async function loadWeather(lat, lon, label)
 
 async function searchLocation()
 {
-    document.getElementById("place").textContent = "Suche Standort...";
+    const query = document.getElementById("locationInput").value.trim();
+	if (!query) return;
+	
+	document.getElementById("place").textContent = "Suche Standort...";
+	
+	var place = null;
+	
+	if (query.toLowerCase() === "mordor")
+	{
+		place = await findMordor();
+	}
+	else
+	{
+		const res = await fetch(
+			`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1`
+		);
 
-    const query = document.getElementById("locationInput").value;
+		const geo = await res.json();
 
-    if (!query) return;
+		if (!geo.results || geo.results.length === 0)
+		{
+			alert("Location not found.");
+			return;
+		}
 
-    const res = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1`
-    );
-
-    const geo = await res.json();
-
-    if (!geo.results || geo.results.length === 0)
-    {
-        alert("Location not found.");
-        return;
-    }
-
-    const place = geo.results[0];
-
-    loadWeather(
-        place.latitude,
-        place.longitude,
-        `${place.name}, ${place.country}`
-    );
+		place = geo.results[0];
+	}
+	
+	loadWeather(place.latitude, place.longitude, `${place.name}, ${place.country}`);
 }
 
-function useMyLocation(enableAlert)
+async function useMyLocation(enableAlert)
 {
     if (enableAlert)
     {
@@ -307,6 +312,41 @@ function useMyLocation(enableAlert)
         },
         options
     );
+}
+
+async function findMordor()
+{
+	const cities = [ { "name": "Berlin", "lat": 52.52437, "lon": 13.41053 }, { "name": "Hamburg", "lat": 53.55073, "lon": 9.99302 }, { "name": "München", "lat": 48.13743, "lon": 11.57549 }, { "name": "Köln", "lat": 50.93333, "lon": 6.95 }, { "name": "Frankfurt am Main", "lat": 50.11552, "lon": 8.68417 }, { "name": "Stuttgart", "lat": 48.78232, "lon": 9.17702 }, { "name": "Düsseldorf", "lat": 51.22319, "lon": 6.77927 }, { "name": "Leipzig", "lat": 51.33962, "lon": 12.37129 }, { "name": "Dortmund", "lat": 51.51494, "lon": 7.466 }, { "name": "Bremen", "lat": 53.07582, "lon": 8.80717 }, { "name": "Essen", "lat": 51.45657, "lon": 7.01228 }, { "name": "Dresden", "lat": 51.05089, "lon": 13.73832 }, { "name": "Hannover", "lat": 52.37052, "lon": 9.73322 }, { "name": "Nürnberg", "lat": 49.45421, "lon": 11.07752 }, { "name": "Duisburg", "lat": 51.43247, "lon": 6.76516 }, { "name": "Bochum", "lat": 51.48165, "lon": 7.21648 }, { "name": "Wuppertal", "lat": 51.25627, "lon": 7.14816 }, { "name": "Bielefeld", "lat": 52.03333, "lon": 8.53333 }, { "name": "Bonn", "lat": 50.73438, "lon": 7.09549 }, { "name": "Münster", "lat": 51.96236, "lon": 7.62571 }, { "name": "Karlsruhe", "lat": 49.00937, "lon": 8.40444 }, { "name": "Mannheim", "lat": 49.4891, "lon": 8.46694 }, { "name": "Augsburg", "lat": 48.37154, "lon": 10.89851 }, { "name": "Wiesbaden", "lat": 50.08601, "lon": 8.24435 }, { "name": "Mönchengladbach", "lat": 51.18539, "lon": 6.44172 }, { "name": "Gelsenkirchen", "lat": 51.50508, "lon": 7.09654 }, { "name": "Aachen", "lat": 50.77664, "lon": 6.08342 }, { "name": "Braunschweig", "lat": 52.26594, "lon": 10.52673 }, { "name": "Chemnitz", "lat": 50.8357, "lon": 12.92922 }, { "name": "Kiel", "lat": 54.32133, "lon": 10.13489 }, { "name": "Halle (Saale)", "lat": 51.48158, "lon": 11.97947 }, { "name": "Magdeburg", "lat": 52.13129, "lon": 11.63189 }, { "name": "Freiburg im Breisgau", "lat": 47.9959, "lon": 7.85222 }, { "name": "Krefeld", "lat": 51.33645, "lon": 6.55381 }, { "name": "Mainz", "lat": 49.98185, "lon": 8.28008 }, { "name": "Lübeck", "lat": 53.86893, "lon": 10.68729 }, { "name": "Erfurt", "lat": 50.97734, "lon": 11.03536 }, { "name": "Oberhausen", "lat": 51.47805, "lon": 6.8625 }, { "name": "Rostock", "lat": 54.0887, "lon": 12.14049 }, { "name": "Kassel", "lat": 51.31667, "lon": 9.5 }, { "name": "Hagen", "lat": 51.36081, "lon": 7.47168 }, { "name": "Potsdam", "lat": 52.39886, "lon": 13.06566 }, { "name": "Saarbrücken", "lat": 49.23262, "lon": 7.00982 }, { "name": "Hamm", "lat": 51.68033, "lon": 7.82089 }, { "name": "Ludwigshafen am Rhein", "lat": 49.48121, "lon": 8.44641 }, { "name": "Oldenburg", "lat": 53.14039, "lon": 8.21479 }, { "name": "Osnabrück", "lat": 52.27264, "lon": 8.0498 }, { "name": "Leverkusen", "lat": 51.0303, "lon": 6.98432 }, { "name": "Heidelberg", "lat": 49.40768, "lon": 8.69079 }, { "name": "Solingen", "lat": 51.17343, "lon": 7.0845 }, { "name": "Darmstadt", "lat": 49.87167, "lon": 8.65027 }, { "name": "Herne", "lat": 51.5388, "lon": 7.22572 }, { "name": "Neuss", "lat": 51.19807, "lon": 6.68504 }, { "name": "Regensburg", "lat": 49.01513, "lon": 12.10161 }, { "name": "Paderborn", "lat": 51.71905, "lon": 8.75439 }, { "name": "Ingolstadt", "lat": 48.76508, "lon": 11.42372 }, { "name": "Offenbach am Main", "lat": 50.10061, "lon": 8.76647 }, { "name": "Würzburg", "lat": 49.79391, "lon": 9.95121 }, { "name": "Fürth", "lat": 49.47593, "lon": 10.98856 }, { "name": "Ulm", "lat": 48.39841, "lon": 9.99155 }, { "name": "Heilbronn", "lat": 49.13995, "lon": 9.22054 }, { "name": "Pforzheim", "lat": 48.88436, "lon": 8.69892 }, { "name": "Wolfsburg", "lat": 52.42452, "lon": 10.7815 }, { "name": "Göttingen", "lat": 51.53443, "lon": 9.93228 }, { "name": "Bottrop", "lat": 51.52392, "lon": 6.9285 }, { "name": "Reutlingen", "lat": 48.49144, "lon": 9.20427 }, { "name": "Koblenz", "lat": 50.35357, "lon": 7.57883 }, { "name": "Bremerhaven", "lat": 53.55357, "lon": 8.57553 }, { "name": "Recklinghausen", "lat": 51.61379, "lon": 7.19738 }, { "name": "Bergisch Gladbach", "lat": 50.9856, "lon": 7.13298 }, { "name": "Jena", "lat": 50.92878, "lon": 11.5899 }, { "name": "Remscheid", "lat": 51.17983, "lon": 7.1925 }, { "name": "Erlangen", "lat": 49.59099, "lon": 11.00783 }, { "name": "Moers", "lat": 51.45342, "lon": 6.6326 }, { "name": "Siegen", "lat": 50.87481, "lon": 8.02431 }, { "name": "Hildesheim", "lat": 52.15077, "lon": 9.95112 }, { "name": "Salzgitter", "lat": 52.15705, "lon": 10.4154 }, { "name": "Cottbus", "lat": 51.75769, "lon": 14.32888 }];
+
+	const latitudes = cities.map(c => c.lat).join(",");
+	const longitudes = cities.map(c => c.lon).join(",");
+
+	const url = `https://api.open-meteo.com/v1/forecast` +
+		`?latitude=${latitudes}` +
+		`&longitude=${longitudes}` +
+		`&current=temperature_2m`;
+
+	const response = await fetch(url);
+	const data = await response.json();
+
+	let mordor = null;
+
+	data.forEach((location, index) => {
+		const temp = location.current.temperature_2m;
+
+		if (!mordor || temp > mordor.temperature)
+		{
+			city = cities[index]
+			mordor = {
+				name: city.name,
+				country: "Germany",
+				latitude: city.lat,
+				longitude: city.lon,
+				temperature: temp
+			}
+		}
+	});
+	return mordor;
 }
 
 document.getElementById("locationInput").addEventListener("keyup", function(event)
